@@ -50,12 +50,25 @@
                 const lowercase = this.toLowerCase();
                 const words = lowercase.split(" ");
                 const capitalizedWords = words.map((word) => {
-                    let letters = word.split("");
-                    let firstLetter = letters.shift();
-                    firstLetter = firstLetter.toUpperCase();
-                    letters.unshift(firstLetter);
-                    return letters.join("");
+                    switch (word) {
+                        case "hip":
+                            return "HIP";
+                            break;
+                        default:
+                            if (word[2] === "-") {
+                                return word.toUpperCase();
+                                break;
+                            }
+
+                            let letters = word.split("");
+                            let firstLetter = letters.shift();
+                            firstLetter = firstLetter.toUpperCase();
+                            letters.unshift(firstLetter);
+                            return letters.join("");
+                            break;
+                    }
                 });
+
                 return capitalizedWords.join(" ");
             };
 
