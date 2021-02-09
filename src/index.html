@@ -10,343 +10,51 @@
             rel="stylesheet"
             href="font-awesome-4.7.0/css/font-awesome.min.css"
         />
+        <script defer src="index.js"></script>
     </head>
 
     <body>
-        <div class="controls">
-            <input
-                class="control-input"
-                type="text"
-                list="system-search-list"
-                name="reference-system"
-                id="reference-system"
-            />
+        <main class="content">
+            <div class="controls">
+                <h1 class="controls-title">Thargoid Barnacles</h1>
 
-            <select
-                name="barnacle-type"
-                id="barnacle-type"
-                class="control-input"
-            >
-                <option value="" selected>All</option>
-                <option value="unknown">Unknown</option>
-                <option value="common">Common Thargoid Barnacle</option>
-                <option value="large">Large Thargoid Barnacle</option>
-            </select>
+                <div class="search-widget">
+                    <input
+                        type="text"
+                        id="selected-ref"
+                        class="control-input"
+                        disabled=""
+                        value="Sol"
+                    />
 
-            <button id="get-tb-data">Search</button>
+                    <button id="get-data" class="button">
+                        <i class="fa fa-search enabled-spinner fa-fw"></i> Find
+                        Sites
+                    </button>
+                </div>
 
-            <datalist
-                type="text"
-                name="system-search-list"
-                id="system-search-list"
-            ></datalist>
-        </div>
+                <select id="barnacle-type" class="control-input">
+                    <option value="" selected>All</option>
+                    <option value="unknown">Unknown</option>
+                    <option value="common">Common Thargoid Barnacle</option>
+                    <option value="large">Large Thargoid Barnacle</option>
+                </select>
 
-        <div id="selected-ref"></div>
-        <div id="data-target"></div>
+                <input
+                    class="control-input"
+                    type="text"
+                    id="reference-system-search"
+                    placeholder="Search systems"
+                />
 
-        <script>
-            String.prototype.toTitleCase = function () {
-                const lowercase = this.toLowerCase();
-                const words = lowercase.split(" ");
-                const capitalizedWords = words.map((word) => {
-                    switch (word) {
-                        case "hip":
-                            return "HIP";
-                            break;
-                        default:
-                            if (word[2] === "-") {
-                                return word.toUpperCase();
-                                break;
-                            }
+                <select
+                    id="system-search-list"
+                    class="control-input"
+                    size="10"
+                ></select>
+            </div>
 
-                            let letters = word.split("");
-                            let firstLetter = letters.shift();
-                            firstLetter = firstLetter.toUpperCase();
-                            letters.unshift(firstLetter);
-                            return letters.join("");
-                            break;
-                    }
-                });
-
-                return capitalizedWords.join(" ");
-            };
-
-            /**
-             * Returns a float distance between two systems.
-             * @param {number} x1 First system's x coord
-             * @param {number} y1 First system's y coord
-             * @param {number} z1 First system's z coord
-             * @param {number} x2 Second system's x coord
-             * @param {number} y2 Second system's y coord
-             * @param {number} z2 Second system's z coord
-             */
-            function calcSystemDist(x1, y1, z1, x2, y2, z2) {
-                return Math.sqrt(
-                    Math.pow(x2 - x1, 2) +
-                        Math.pow(y2 - y1, 2) +
-                        Math.pow(z2 - z1, 2)
-                );
-            }
-
-            function transformCanonnData(sites) {
-                let transformedData = [];
-
-                for (site of sites) {
-                    const siteData = { ...site };
-                    delete siteData.system;
-                    delete siteData.body;
-
-                    // System already exists?
-                    const system = transformedData.find(
-                        (entry) => site.system.id === entry.id
-                    );
-
-                    if (system === undefined) {
-                        const systemData = Object.assign({}, site.system);
-                        const bodyData = Object.assign({}, site.body);
-
-                        bodyData.sites = [];
-                        bodyData.sites.push(siteData);
-                        systemData.bodies = [];
-                        systemData.bodies.push(bodyData);
-
-                        transformedData.push(systemData);
-                    } else {
-                        // Body already exists?
-                        const body = system.bodies.find(
-                            (entry) => site.body.id === entry.id
-                        );
-
-                        if (body === undefined) {
-                            const bodyData = Object.assign({}, site.body);
-
-                            bodyData.sites = [];
-                            bodyData.sites.push(siteData);
-                            system.bodies.push(bodyData);
-                        } else {
-                            body.sites.push(siteData);
-                        }
-                    }
-                }
-
-                return transformedData;
-            }
-
-            function expandSystemOptions(searchString) {
-                fetch(
-                    `https://eddb.io/system/search?system[name]=${searchString}&system[version]=2`
-                )
-                    .then((response) => response.json())
-                    .then((systems) => {
-                        systemSearchList.innerHTML = "";
-                        for (system of systems) {
-                            const dataListOption = document.createElement(
-                                "option"
-                            );
-                            dataListOption.innerText = system.id;
-                            dataListOption.value = system.name;
-                            systemSearchList.appendChild(dataListOption);
-                        }
-                    })
-                    .catch((error) => console.log(error));
-            }
-
-            function populateWithApiData(data, refSystemCoords) {
-                const dataTarget = document.getElementById("data-target");
-                dataTarget.innerHTML = "";
-
-                for ([idx, system] of data.entries()) {
-                    const systemCoords = {
-                        x: system.edsmCoordX,
-                        y: system.edsmCoordY,
-                        z: system.edsmCoordZ,
-                    };
-
-                    data[idx].distanceToRef = calcSystemDist(
-                        systemCoords.x,
-                        systemCoords.y,
-                        systemCoords.z,
-                        refSystemCoords.x,
-                        refSystemCoords.y,
-                        refSystemCoords.z
-                    ).toFixed(2);
-                }
-
-                const sortedData = data.sort(
-                    (a, b) => a.distanceToRef - b.distanceToRef
-                );
-
-                for (system of sortedData) {
-                    // System
-                    const systemDetails = document.createElement("details");
-                    const systemSummary = document.createElement("summary");
-                    const systemContent = document.createElement("div");
-
-                    systemDetails.classList.add("system-collapse");
-                    systemSummary.classList.add("system-collapse-name");
-                    systemContent.classList.add("system-collapse-content");
-
-                    const systemName = document.createElement("span");
-                    const systemDistanceToRef = document.createElement("span");
-                    systemName.innerHTML = `<i class="fa fa-dot-circle-o" style="color: #dedede;"></i> ${system.systemName.toTitleCase()}`;
-                    systemDistanceToRef.innerText =
-                        system.distanceToRef + " ly";
-
-                    systemSummary.appendChild(systemName);
-                    systemSummary.appendChild(systemDistanceToRef);
-                    systemDetails.appendChild(systemSummary);
-
-                    for (body of system.bodies) {
-                        //Body
-                        const bodyDetails = document.createElement("details");
-                        const bodySummary = document.createElement("summary");
-                        const bodyContent = document.createElement("div");
-
-                        bodyDetails.classList.add("body-collapse");
-                        bodySummary.classList.add("body-collapse-name");
-                        bodyContent.classList.add("body-collapse-content");
-
-                        const bodyName = document.createElement("span");
-                        const bodyDistanceToArrival = document.createElement(
-                            "span"
-                        );
-                        bodyName.innerHTML = `<i class="fa fa-globe"></i> ${body.bodyName.toTitleCase()}`;
-                        bodyDistanceToArrival.innerText =
-                            body.distanceToArrival.toLocaleString("us") + " ls";
-
-                        bodySummary.appendChild(bodyName);
-                        bodySummary.appendChild(bodyDistanceToArrival);
-                        bodyDetails.appendChild(bodySummary);
-
-                        // Site Table
-                        const siteTable = document.createElement("table");
-                        const siteTHead = document.createElement("thead");
-                        const siteTBody = document.createElement("tbody");
-
-                        // Table Headers
-                        const siteHeaders = document.createElement("tr");
-
-                        const siteLat = document.createElement("th");
-                        siteLat.innerText = "Latitude";
-
-                        const siteLon = document.createElement("th");
-                        siteLon.innerText = "Longitude";
-
-                        const siteBarnacleType = document.createElement("th");
-                        siteBarnacleType.innerText = "Barnacle Type";
-
-                        siteHeaders.appendChild(siteBarnacleType);
-                        siteHeaders.appendChild(siteLat);
-                        siteHeaders.appendChild(siteLon);
-                        siteTHead.appendChild(siteHeaders);
-
-                        for (site of body.sites) {
-                            // Site
-                            // Table Body
-                            const siteDataRow = document.createElement("tr");
-
-                            const siteLat = document.createElement("td");
-                            siteLat.innerText = site.latitude;
-
-                            const siteLon = document.createElement("td");
-                            siteLon.innerText = site.longitude;
-
-                            const siteBarnacleType = document.createElement(
-                                "td"
-                            );
-                            siteBarnacleType.innerText = site.type.type;
-
-                            siteDataRow.appendChild(siteBarnacleType);
-                            siteDataRow.appendChild(siteLat);
-                            siteDataRow.appendChild(siteLon);
-
-                            siteTBody.appendChild(siteDataRow);
-                        }
-
-                        siteTable.appendChild(siteTHead);
-                        siteTable.appendChild(siteTBody);
-
-                        bodyContent.appendChild(siteTable);
-                        bodyDetails.appendChild(bodyContent);
-                        systemContent.appendChild(bodyDetails);
-                        systemDetails.appendChild(systemContent);
-                    }
-
-                    dataTarget.appendChild(systemDetails);
-                }
-            }
-
-            const systemSearchInput = document.getElementById(
-                "reference-system"
-            );
-            const systemSearchList = document.getElementById(
-                "system-search-list"
-            );
-            const queryCanonnButton = document.getElementById("get-tb-data");
-            const barnacleTypeSelect = document.getElementById("barnacle-type");
-
-            queryCanonnButton.addEventListener("click", () => {
-                let refSystem = "Sol";
-                if (systemSearchList.childNodes.length !== 0) {
-                    refSystem = systemSearchList.childNodes[0].value;
-                }
-
-                fetch(
-                    `https://eddbapi.kodeblox.com/api/v4/systems?name=${encodeURIComponent(
-                        refSystem
-                    )}`
-                )
-                    .then((response) => response.json())
-                    .then((systemResults) => {
-                        const system = systemResults.docs[0];
-
-                        fetch("https://api.canonn.tech/tbsites?_limit=10000")
-                            .then((response) => response.json())
-                            .then((data) => {
-                                const filteredData = data.filter((system) => {
-                                    switch (barnacleTypeSelect.value) {
-                                        case "unknown":
-                                            return (
-                                                system.type.type === "Unknown"
-                                            );
-                                            break;
-                                        case "common":
-                                            return (
-                                                system.type.type ===
-                                                "Common Thargoid Barnacle"
-                                            );
-                                            break;
-                                        case "large":
-                                            return (
-                                                system.type.type ===
-                                                "Large Thargoid Barnacle"
-                                            );
-                                            break;
-                                        default:
-                                            return true;
-                                    }
-                                });
-
-                                populateWithApiData(
-                                    transformCanonnData(filteredData),
-                                    {
-                                        x: system.x,
-                                        y: system.y,
-                                        z: system.z,
-                                    }
-                                );
-                            })
-                            .catch((error) =>
-                                console.log("Fetching from API failed.", error)
-                            );
-                    })
-                    .catch((error) => console.log(error));
-            });
-
-            systemSearchInput.addEventListener("keyup", () => {
-                expandSystemOptions(systemSearchInput.value);
-            });
-        </script>
+            <div class="results" id="data-target"></div>
+        </main>
     </body>
 </html>
