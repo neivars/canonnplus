@@ -1,10 +1,11 @@
 {
-  "name": "canonnplus",
-  "version": "1.0.0",
+  "name": "octogone",
+  "version": "1.1.0",
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron main.js"
+    "start": "electron main.js",
+    "buildover": "electron-packager --out dist --asar --overwrite ."
   },
   "keywords": [],
   "author": "",

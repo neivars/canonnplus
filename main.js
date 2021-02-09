@@ -2,7 +2,7 @@ const { app, BrowserWindow } = require("electron");
 
 function createMainWindow() {
     const win = new BrowserWindow({
-        title: "ThargoidWinder",
+        title: "OctoGone",
         webPreferences: {
             nodeIntegration: true,
         },
