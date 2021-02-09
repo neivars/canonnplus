@@ -129,7 +129,7 @@ function expandSystemOptions(searchString) {
                         dataListOption.innerText,
                         dataListOption.value
                     );
-                    fetchData();
+                    fetchData(referenceSystemInput.value);
                 });
 
                 systemSearchList.appendChild(dataListOption);
