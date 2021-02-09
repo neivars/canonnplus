@@ -4,11 +4,11 @@ function createMainWindow() {
     const win = new BrowserWindow({
         title: "ThargoidWinder",
         webPreferences: {
-            nodeIntegration: true
-        }
+            nodeIntegration: true,
+        },
     });
-    win.loadFile("./index.html");
-};
+    win.loadFile("src/index.html");
+}
 
 app.on("ready", createMainWindow);
 
